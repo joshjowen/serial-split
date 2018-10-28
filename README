@@ -1,0 +1,15 @@
+Package to passthrough one serial device to another allowing access from the computer also.
+
+make a deb package with:
+
+sudo -k checkinstall \
+  --pkgsource="https://github.com/joshjowen/serial-split/" \
+  --pkglicense="BSD" \
+  --deldesc=no \
+  --nodoc \
+  --maintainer="Josh\\<josh.owen@universalfieldrobots.com.au\\>" \
+  --pkgarch=$(dpkg --print-architecture) \
+  --pkgversion="0.0.2" \
+  --pkgrelease="snapshot" \
+  --pkgname=serial-split \
+  --backup=no 
