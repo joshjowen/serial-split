@@ -1,7 +1,8 @@
 //  serial_split.cpp
 //  
-//  Connects two serial ports and provides a psuedo terminal that allows
-//  Third party access to the communications
+//  Connects two serial ports  or a serial port and a pseudo terminal
+//  and provides a pseudo terminal that allows third party access to the 
+//  communications.
 //
 //  Created by Joshua Owen on 12/10/18
 
@@ -78,6 +79,7 @@ int open_pty(dev_struct* device)
     return (device->fd);
 }
 
+
 void transmit(int infd, int outfd, int virtfd)
 {
     unsigned char buffer[255];
@@ -97,6 +99,19 @@ void transmit(int infd, int outfd, int virtfd)
     }
 }
 
+
+void close_ports(int s)
+{   
+    cout << "Closing Ports" << endl;
+    if(inputDevice.fd)   close(inputDevice.fd);
+    if(outputDevice.fd)  close(outputDevice.fd);
+    if(virtualDevice.fd) close(virtualDevice.fd);
+    
+    cout << "Ports Closed" << endl;
+    exit(1);   
+}
+
+
 int main(int argc, char* argv[])
 {   
     // Set default values for ports
@@ -104,6 +119,15 @@ int main(int argc, char* argv[])
     inputDevice.fd = outputDevice.fd = virtualDevice.fd = -1;
     inputDevice.baudrate = outputDevice.baudrate = B9600;
     inputDevice.parity = PARITY_NONE;
+    
+    // set signal handler
+    struct sigaction sigIntHandler;
+
+    sigIntHandler.sa_handler = close_ports;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+
+    sigaction(SIGINT, &sigIntHandler, NULL);
 
     int optret; // return value for command line options
     int i; // Counter for while loops
@@ -180,7 +204,7 @@ int main(int argc, char* argv[])
     // open input device
     if (open_port(&inputDevice) < 0)
     {
-        cout << "\nFailed to open input device\n\n";
+        perror("Failed to open input device");
         return -1;
     }
     
@@ -189,7 +213,7 @@ int main(int argc, char* argv[])
     {
       if (open_pty(&outputDevice) < 0)
       {
-          cout << "\nFailed to open virtual output device\n\n";
+          perror("Failed to open virtual output device");
           return -1;
       }
       else
@@ -201,14 +225,14 @@ int main(int argc, char* argv[])
     {
       if (open_port(&outputDevice) < 0)
       {
-          cout << "\nFailed to open output device\n\n";
+          perror("Failed to open output device");
           return -1;
       }
     }
     
     if (open_pty(&virtualDevice) < 0)
     {
-        cout << "\nFailed to open virtual device\n\n";
+        perror("Failed to open virtual device\n\n");
     } else
     {
         cout << "Virtual: " << virtualDevice.name << endl;

@@ -9,7 +9,7 @@ sudo -k checkinstall \
   --nodoc \
   --maintainer="Josh\\<josh.owen@universalfieldrobots.com.au\\>" \
   --pkgarch=$(dpkg --print-architecture) \
-  --pkgversion="0.0.2" \
+  --pkgversion="0.0.3" \
   --pkgrelease="snapshot" \
   --pkgname=serial-split \
   --backup=no 

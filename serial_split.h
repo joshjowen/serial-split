@@ -15,11 +15,12 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <csignal>
 
 typedef struct baud_struct
 {
     speed_t baud;
-    char *baudString;
+    const char *baudString;
 } baud_struct;
 
 static baud_struct baudRates[] = {
