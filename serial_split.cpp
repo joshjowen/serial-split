@@ -90,9 +90,13 @@ void transmit(int infd, int outfd, int virtfd)
     {
         if (readSize > 0)
         {
+            tcflush(outfd, TCOFLUSH);
             write(outfd, buffer, readSize);
             if (virtfd >= 0)
+            {
+                tcflush(virtfd, TCOFLUSH);
                 write(virtfd, buffer, readSize);
+            }
         }
         else
         {
