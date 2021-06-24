@@ -17,7 +17,8 @@ void print_usage()
     cout << "\nusage: serial_split [options]\n\noptions:"
          << "\n\t-i    - input device"
          << "\n\t-o    - output device (default: create virtual)"
-         << "\n\t-s    - symlink location (default: just use /dev/pts/[N])"
+         << "\n\t-s    - symlink location for output device (default: just use /dev/pts/[N])"
+         << "\n\t-v    - symlink location for virtual device (default: just use /dev/pts/[N])"
          << "\n\t-b    - baudrate (default '9600')"
          << "\n\t-p    - parity (default 'none')"
          << "\n\t-d    - sends both outputs to virtual device (default 'input device only')"
@@ -137,10 +138,10 @@ int main(int argc, char *argv[])
     bool dualWrite = false;
     bool bridge = false;
 
-    std::string symlink_name;
+    std::string symlink_name, vsymlink_name;
 
     // Get command line options
-    while ((optret = getopt(argc, argv, "b:p:i:o:s:dch?")) != -1)
+    while ((optret = getopt(argc, argv, "b:p:i:o:s:v:dch?")) != -1)
     {
         switch (optret)
         {
@@ -190,6 +191,9 @@ int main(int argc, char *argv[])
         case 's':
             symlink_name = std::string(optarg);
             break;
+        case 'v':
+            vsymlink_name = std::string(optarg);
+            break;
         case 'd':
             dualWrite = true;
             break;
@@ -228,10 +232,23 @@ int main(int argc, char *argv[])
             perror("Failed to open virtual output device");
             return -1;
         }
+
+        if (!symlink_name.empty())
+        {
+            remove(symlink_name.c_str());
+            if (symlink(outputDevice.name, symlink_name.c_str()) < 0)
+            {
+                perror("Failed to create output device symlink");
+                return -1;
+            }
+
+            cout << "Output: " << symlink_name.c_str() << endl;
+        }
         else
         {
             cout << "Output: " << outputDevice.name << endl;
         }
+
     }
     else
     {
@@ -251,16 +268,16 @@ int main(int argc, char *argv[])
         }
         else
         {
-            if (!symlink_name.empty())
+            if (!vsymlink_name.empty())
             {
-                remove(symlink_name.c_str());
-                if (symlink(virtualDevice.name, symlink_name.c_str()) < 0)
+                remove(vsymlink_name.c_str());
+                if (symlink(virtualDevice.name, vsymlink_name.c_str()) < 0)
                 {
-                    perror("Failed to create symlink");
+                    perror("Failed to create virtual device symlink");
                     return -1;
                 }
 
-                cout << "Virtual: " << symlink_name.c_str() << endl;
+                cout << "Virtual: " << vsymlink_name.c_str() << endl;
             }
             else
             {
