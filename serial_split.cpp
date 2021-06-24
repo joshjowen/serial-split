@@ -17,6 +17,7 @@ void print_usage()
     cout << "\nusage: serial_split [options]\n\noptions:"
          << "\n\t-i    - input device"
          << "\n\t-o    - output device (default: create virtual)"
+         << "\n\t-s    - symlink location (default: just use /dev/pts/[N])"
          << "\n\t-b    - baudrate (default '9600')"
          << "\n\t-p    - parity (default 'none')"
          << "\n\t-d    - sends both outputs to virtual device (default 'input device only')"
@@ -136,8 +137,10 @@ int main(int argc, char *argv[])
     bool dualWrite = false;
     bool bridge = false;
 
+    std::string symlink_name;
+
     // Get command line options
-    while ((optret = getopt(argc, argv, "b:p:i:o:dch?")) != -1)
+    while ((optret = getopt(argc, argv, "b:p:i:o:s:dch?")) != -1)
     {
         switch (optret)
         {
@@ -184,7 +187,9 @@ int main(int argc, char *argv[])
         case 'o':
             outputDevice.name = optarg;
             break;
-
+        case 's':
+            symlink_name = std::string(optarg);
+            break;
         case 'd':
             dualWrite = true;
             break;
@@ -242,10 +247,25 @@ int main(int argc, char *argv[])
         if (open_pty(&virtualDevice) < 0)
         {
             perror("Failed to open virtual device\n\n");
+            return -1;
         }
         else
         {
-            cout << "Virtual: " << virtualDevice.name << endl;
+            if (!symlink_name.empty())
+            {
+                remove(symlink_name.c_str());
+                if (symlink(virtualDevice.name, symlink_name.c_str()) < 0)
+                {
+                    perror("Failed to create symlink");
+                    return -1;
+                }
+
+                cout << "Virtual: " << symlink_name.c_str() << endl;
+            }
+            else
+            {
+                cout << "Virtual: " << virtualDevice.name << endl;
+            }
         }
     }
 
