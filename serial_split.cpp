@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
     fd_set rset;
     int maxfd = max(inputDevice.fd, outputDevice.fd);
     int vfd = dualWrite ? virtualDevice.fd : -1;
-    int ofd = bridge ? virtualDevice.fd : -1;
+    int ofd = !bridge ? virtualDevice.fd : -1;
 
     while (1)
     {
