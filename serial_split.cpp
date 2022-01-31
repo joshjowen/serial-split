@@ -23,6 +23,7 @@ void print_usage()
          << "\n\t-p    - parity (default 'none')"
          << "\n\t-d    - sends both outputs to virtual device (default 'input device only')"
          << "\n\t-c    - Don't intercept just connect 2 devices."
+         << "\n\t-w    - Enable writing from virtual device to input device (default 'false'))"
          << "\n\n";
 }
 
@@ -82,6 +83,7 @@ void transmit(int infd, int outfd, int virtfd)
 {
     unsigned char buffer[255];
     int readSize;
+    int ignored __attribute__((unused));
 
     if ((readSize = read(infd, buffer, 255)) < 0)
     {
@@ -91,11 +93,11 @@ void transmit(int infd, int outfd, int virtfd)
         if (readSize > 0)
         {
             tcflush(outfd, TCOFLUSH);
-            write(outfd, buffer, readSize);
+            ignored = write(outfd, buffer, readSize);
             if (virtfd >= 0)
             {
                 tcflush(virtfd, TCOFLUSH);
-                write(virtfd, buffer, readSize);
+                ignored = write(virtfd, buffer, readSize);
             }
         }
         else
@@ -141,11 +143,12 @@ int main(int argc, char *argv[])
 
     bool dualWrite = false;
     bool bridge = false;
+    bool writeBack = false;
 
     std::string symlink_name, vsymlink_name;
 
     // Get command line options
-    while ((optret = getopt(argc, argv, "b:p:i:o:s:v:dch?")) != -1)
+    while ((optret = getopt(argc, argv, "b:p:i:o:s:v:wdch?")) != -1)
     {
         switch (optret)
         {
@@ -201,9 +204,11 @@ int main(int argc, char *argv[])
         case 'd':
             dualWrite = true;
             break;
-
         case 'c':
             bridge = true;
+            break;
+        case 'w':
+            writeBack = true;
             break;
 
         case 'h':
@@ -293,22 +298,32 @@ int main(int argc, char *argv[])
     fd_set rset;
     int maxfd = max(inputDevice.fd, outputDevice.fd);
     int vfd = dualWrite ? virtualDevice.fd : -1;
-    int ofd = !bridge ? virtualDevice.fd : -1;
+    int ofd = bridge ? virtualDevice.fd : vfd;
 
     while (1)
     {
         FD_ZERO(&rset);
         FD_SET(inputDevice.fd, &rset);
         FD_SET(outputDevice.fd, &rset);
+        if (writeBack && virtualDevice.fd > 0)
+        {
+            FD_SET(virtualDevice.fd, &rset);
+            maxfd = max(maxfd, virtualDevice.fd);
+        }
+
         select(maxfd + 1, &rset, NULL, NULL, NULL);
 
         if (FD_ISSET(inputDevice.fd, &rset))
         {
-            transmit(inputDevice.fd, outputDevice.fd, ofd);
+            transmit(inputDevice.fd, outputDevice.fd, vfd);
         }
-        else if (FD_ISSET(outputDevice.fd, &rset))
+        if (FD_ISSET(outputDevice.fd, &rset))
         {
-            transmit(outputDevice.fd, inputDevice.fd, vfd);
+            transmit(outputDevice.fd, inputDevice.fd, ofd);
+        }
+        if (writeBack && FD_ISSET(virtualDevice.fd, &rset))
+        {
+            transmit(virtualDevice.fd, inputDevice.fd, -1);
         }
     }
     return 0;
